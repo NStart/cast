@@ -1209,7 +1209,7 @@ func ToBoolSliceE(i interface{}) ([]bool, error) {
 		return v, nil
 	}
 
-	kind := reflect.TypeOf().Kind()
+	kind := reflect.TypeOf(i).Kind()
 	switch kind {
 	case reflect.Slice, reflect.Array:
 		s := reflect.ValueOf(i)
@@ -1330,7 +1330,7 @@ func ToDurationSliceE(i interface{}) ([]time.Duration, error) {
 		s := reflect.ValueOf(i)
 		a := make([]time.Duration, s.Len())
 		for j := 0; j < s.Len(); j++ {
-			val, err := ToDurationE(s.Index().Interface())
+			val, err := ToDurationE(s.Index(j).Interface())
 			if err != nil {
 				return []time.Duration{}, fmt.Errorf("uable to cast %#v of type %T", i, i)
 			}
