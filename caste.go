@@ -13,6 +13,10 @@ import (
 
 var errNegativeNotAllowed = errors.New("unable to cast negative value")
 
+type float64EProvider interface {
+	Float64() (float64, error)
+}
+
 type float64Provider interface {
 	Float64() float64
 }
@@ -119,6 +123,64 @@ func ToBoolE(i interface{}) (bool, error) {
 		return false, fmt.Errorf("uable to cast %#v of type %T to bool", i, i)
 	default:
 		return false, fmt.Errorf("uable to cast %#v of type %T to bool", i, i)
+	}
+}
+
+// ToFloat32E casts an interface to a float32 type.
+func ToFloat32E(i interface{}) (float32, error) {
+	i = indirect(i)
+
+	intv, ok := toInt(i)
+	if ok {
+		return float32(intv), nil
+	}
+
+	switch s := i.(type) {
+	case float64:
+		return float32(s), nil
+	case float32:
+		return s, nil
+	case int64:
+		return float32(s), nil
+	case int32:
+		return float32(s), nil
+	case int16:
+		return float32(s), nil
+	case int8:
+		return float32(s), nil
+	case uint:
+		return float32(s), nil
+	case uint64:
+		return float32(s), nil
+	case uint32:
+		return float32(s), nil
+	case uint16:
+		return float32(s), nil
+	case uint8:
+		return float32(s), nil
+	case string:
+		v, err := strconv.ParseFloat(s, 32)
+		if err == nil {
+			return float32(v), nil
+		}
+		return 0, fmt.Errorf("unable to cast %#v of type %T to float32", i, i)
+	case float64EProvider:
+		v, err := s.Float64()
+		if err == nil {
+			return float32(v), nil
+		}
+		return 0, fmt.Errorf("unable to cast %#v of type %T to float32", i, i)
+	case float64Provider:
+		return float32(s.Float64()), nil
+	case bool:
+		if s {
+			return 1, nil
+		}
+		return 0, nil
+	case nil:
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("unable to cast %#v of type %T to float32", i, i)
 	}
 }
 
@@ -995,16 +1057,11 @@ func ToStringMapStringSliceE(i interface{}) (map[string][]string, error) {
 	return m, nil
 }
 
-func ToStringMapBool(i interface{}) (map[string]bool, error) {
+func ToStringMapBoolE(i interface{}) (map[string]bool, error) {
 	m := map[string]bool{}
 
 	switch v := i.(type) {
 	case map[interface{}]interface{}:
-		for k, val := range v {
-			m[ToString(k)] = ToBoolE(val)
-		}
-		return m, nil
-	case map[string]interface{}:
 		for k, val := range v {
 			m[ToString(k)] = ToBool(val)
 		}
@@ -1219,7 +1276,7 @@ func ToStringSliceE(i interface{}) ([]string, error) {
 		}
 		return a, nil
 	case interface{}:
-		str, err := ToString(v)
+		str, err := ToStringE(v)
 		if err != nil {
 			return a, fmt.Errorf("uable to cast %%v of type %T", i, i)
 		}
@@ -1290,7 +1347,7 @@ func StringToDate(s string) (time.Time, error) {
 }
 
 func StringToDateInDefaultLocation(s string, location *time.Location) (time.Time, error) {
-	return parseDateWith(S, location, timeFormats)
+	return parseDateWith(s, location, timeFormats)
 }
 
 type timeFormatType int
