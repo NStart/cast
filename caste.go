@@ -1293,25 +1293,102 @@ func StringToDateInDefaultLocation(s string, location *time.Location) (time.Time
 	return parseDateWith(S, location, timeFormats)
 }
 
-type timeFormatType int 
+type timeFormatType int
 
 const (
 	timeFormatNoTimezone timeFormatType = iota
-	timeFormatNameOfTimezone
-	timeFormatNumbericTimezone
-	timeFormatNumberAndNamedTimezone
+	timeFormatNamedTimezone
+	timeFormatNumericTimezone
+	timeFormatNumericAndNamedTimezone
 	timeFormatTimeOnly
 )
 
 type timeFormat struct {
 	format string
-	typ timeFormatType
+	typ    timeFormatType
 }
 
 func (f timeFormat) hasTimezone() bool {
-	return f.typ >= timeFormatNumbericTimezone && f.typ < timeFormatNumberAndNamedTimezone
+	return f.typ >= timeFormatNumericTimezone && f.typ < timeFormatNumericAndNamedTimezone
 }
 
-var timeFormats = []timeFormat {
-	
+var timeFormats = []timeFormat{
+	// Keep common formats at the top.
+	{"2006-01-02", timeFormatNoTimezone},
+	{time.RFC3339, timeFormatNumericTimezone},
+	{"2006-01-02T15:04:05", timeFormatNoTimezone}, // iso8601 without timezone
+	{time.RFC1123Z, timeFormatNumericTimezone},
+	{time.RFC1123, timeFormatNamedTimezone},
+	{time.RFC822Z, timeFormatNumericTimezone},
+	{time.RFC822, timeFormatNamedTimezone},
+	{time.RFC850, timeFormatNamedTimezone},
+	{"2006-01-02 15:04:05.999999999 -0700 MST", timeFormatNumericAndNamedTimezone}, // Time.String()
+	{"2006-01-02T15:04:05-0700", timeFormatNumericTimezone},                        // RFC3339 without timezone hh:mm colon
+	{"2006-01-02 15:04:05Z0700", timeFormatNumericTimezone},                        // RFC3339 without T or timezone hh:mm colon
+	{"2006-01-02 15:04:05", timeFormatNoTimezone},
+	{time.ANSIC, timeFormatNoTimezone},
+	{time.UnixDate, timeFormatNamedTimezone},
+	{time.RubyDate, timeFormatNumericTimezone},
+	{"2006-01-02 15:04:05Z07:00", timeFormatNumericTimezone},
+	{"02 Jan 2006", timeFormatNoTimezone},
+	{"2006-01-02 15:04:05 -07:00", timeFormatNumericTimezone},
+	{"2006-01-02 15:04:05 -0700", timeFormatNumericTimezone},
+	{time.Kitchen, timeFormatTimeOnly},
+	{time.Stamp, timeFormatTimeOnly},
+	{time.StampMilli, timeFormatTimeOnly},
+	{time.StampMicro, timeFormatTimeOnly},
+	{time.StampNano, timeFormatTimeOnly},
+}
+
+func parseDateWith(s string, location *time.Location, formats []timeFormat) (d time.Time, e error) {
+	for _, format := range formats {
+		if d, e = time.Parse(format.format, s); e == nil {
+			if format.typ <= timeFormatNamedTimezone {
+				if location == nil {
+					location = time.Local
+				}
+				year, month, day := d.Date()
+				hour, min, sec := d.Clock()
+				d = time.Date(year, month, day, hour, min, sec, d.Nanosecond(), location)
+			}
+
+			return
+		}
+	}
+	return d, fmt.Errorf("uable to parse date %s", s)
+}
+
+func jsonStringToObject(s string, v interface{}) error {
+	data := []byte(s)
+	return json.Unmarshal(data, v)
+}
+
+func toInt(v interface{}) (int, bool) {
+	switch v := v.(type) {
+	case int:
+		return v, true
+	case time.Weekday:
+		return int(v), true
+	case time.Month:
+		return int(v), true
+	default:
+		return 0, false
+	}
+}
+
+func trimZeroDecimal(s string) string {
+	var foundZero bool
+	for i := len(s); i > 0; i-- {
+		switch s[i-1] {
+		case '.':
+			if foundZero {
+				return s[:i-1]
+			}
+		case '0':
+			foundZero = true
+		default:
+			return s
+		}
+	}
+	return s
 }
