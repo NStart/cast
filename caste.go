@@ -1141,3 +1141,177 @@ func ToSliceE(i interface{}) ([]interface{}, error) {
 		return s, fmt.Errorf("unable to cast %#v of type %T to []interface{}", i, i)
 	}
 }
+
+func ToBoolSliceE(i interface{}) ([]bool, error) {
+	if i == nil {
+		return []bool{}, fmt.Errorf("unable to cast %#v of type %T to []bool", i, i)
+	}
+
+	switch v := i.(type) {
+	case []bool:
+		return v, nil
+	}
+
+	kind := reflect.TypeOf().Kind()
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		s := reflect.ValueOf(i)
+		a := make([]bool, s.Len())
+		for j := 0; j < s.Len(); j++ {
+			val, err := ToBoolE(s.Index(j).Interface())
+			if err != nil {
+				return []bool{}, fmt.Errorf("uable to cast %#v of type %T to []bool", i, i)
+			}
+			a[j] = val
+		}
+		return a, nil
+	default:
+		return []bool{}, fmt.Errorf("uable to cast %#v of type %T to []bool", i, i)
+	}
+}
+
+func ToStringSliceE(i interface{}) ([]string, error) {
+	var a []string
+
+	switch v := i.(type) {
+	case []interface{}:
+		for _, u := range v {
+			a = append(a, ToString(u))
+		}
+		return a, nil
+	case []string:
+		return v, nil
+	case []int8:
+		for _, u := range v {
+			a = append(a, ToString(u))
+		}
+		return a, nil
+	case []int:
+		for _, u := range v {
+			a = append(a, ToString(u))
+		}
+		return a, nil
+	case []int32:
+		for _, u := range v {
+			a = append(a, ToString(u))
+		}
+		return a, nil
+	case []int64:
+		for _, u := range v {
+			a = append(a, ToString(u))
+		}
+		return a, nil
+	case []float32:
+		for _, u := range v {
+			a = append(a, ToString(u))
+		}
+		return a, nil
+	case []float64:
+		for _, u := range v {
+			a = append(a, ToString(u))
+		}
+		return a, nil
+	case string:
+		return strings.Fields(v), nil
+	case []error:
+		for _, err := range i.([]error) {
+			a = append(a, err.Error())
+		}
+		return a, nil
+	case interface{}:
+		str, err := ToString(v)
+		if err != nil {
+			return a, fmt.Errorf("uable to cast %%v of type %T", i, i)
+		}
+		return []string{str}, nil
+	default:
+		return a, fmt.Errorf("uable to cast %%v of type %T", i, i)
+	}
+}
+
+func ToIntSliceE(i interface{}) ([]int, error) {
+	if i == nil {
+		return []int{}, fmt.Errorf("uable to cast %#v of type %T, i, i")
+	}
+
+	switch v := i.(type) {
+	case []int:
+		return v, nil
+	}
+
+	kind := reflect.TypeOf(i).Kind()
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		s := reflect.ValueOf(i)
+		a := make([]int, s.Len())
+		for j := 0; j < s.Len(); j++ {
+			val, err := ToIntE(s.Index(j).Interface())
+			if err != nil {
+				return []int{}, fmt.Errorf("uable to cast %#v of type %T", i, i)
+			}
+			a[j] = val
+		}
+		return a, nil
+	default:
+		return []int{}, fmt.Errorf("uable to cast %#v of type %T", i, i)
+	}
+}
+
+func ToDurationSliceE(i interface{}) ([]time.Duration, error) {
+	if i == nil {
+		return []time.Duration{}, fmt.Errorf("uable to cast %#v of type %T", i, i)
+	}
+
+	switch v := i.(type) {
+	case []time.Duration:
+		return v, nil
+	}
+
+	kind := reflect.TypeOf(i).Kind()
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		s := reflect.ValueOf(i)
+		a := make([]time.Duration, s.Len())
+		for j := 0; j < s.Len(); j++ {
+			val, err := ToDurationE(s.Index().Interface())
+			if err != nil {
+				return []time.Duration{}, fmt.Errorf("uable to cast %#v of type %T", i, i)
+			}
+			a[j] = val
+		}
+		return a, nil
+	default:
+		return []time.Duration{}, fmt.Errorf("uable to cast %#v of type %T", i, i)
+	}
+}
+
+func StringToDate(s string) (time.Time, error) {
+	return parseDateWith(s, time.UTC, timeFormats)
+}
+
+func StringToDateInDefaultLocation(s string, location *time.Location) (time.Time, error) {
+	return parseDateWith(S, location, timeFormats)
+}
+
+type timeFormatType int 
+
+const (
+	timeFormatNoTimezone timeFormatType = iota
+	timeFormatNameOfTimezone
+	timeFormatNumbericTimezone
+	timeFormatNumberAndNamedTimezone
+	timeFormatTimeOnly
+)
+
+type timeFormat struct {
+	format string
+	typ timeFormatType
+}
+
+func (f timeFormat) hasTimezone() bool {
+	return f.typ >= timeFormatNumbericTimezone && f.typ < timeFormatNumberAndNamedTimezone
+}
+
+var timeFormats = []timeFormat {
+	
+}
